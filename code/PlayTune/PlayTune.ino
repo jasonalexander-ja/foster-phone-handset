@@ -1,4 +1,3 @@
-#include "pitches.h"
 #include <PlayRtttl.hpp>
 
 #define PIEZO_PIN 2
@@ -6,10 +5,7 @@
 #define HALL_PULSE 27
 
 
-long int reads[10];
-
 void setup() {
-  Serial.begin(115200);
   analogReadResolution(12);
   delay(1000);
   pinMode(PIEZO_PIN, OUTPUT);
@@ -20,41 +16,39 @@ void setup() {
 
 void loop() {
   while (true) {
-    long int reads = 0;
-
-    for (int i = 0; i < 10; i++) {
-
-      digitalWrite(HALL_PULSE, LOW);
-      delay(10);
-      digitalWrite(HALL_PULSE, HIGH);
-      delay(10);
-      reads += analogRead(HALL_READ);
-    }
-
-    reads = reads / 10;
-    Serial.println(reads);
-
-    if (reads < 200) break;
-  }
-  int songNo = random(0, 26);
-  playRtttlBlockingPGM(PIEZO_PIN, getSong(songNo));
-
-  while (true) {
-    long int reads = 0;
-
-    for (int i = 0; i < 10; i++) {
-      digitalWrite(HALL_PULSE, LOW);
-      delay(10);
-      digitalWrite(HALL_PULSE, HIGH);
-      delay(10);
-      reads += analogRead(HALL_READ);
-    }
-
-    reads = reads / 10;
-    Serial.println(reads);
-
+    long int reads = readHall();
     if (reads > 1000) break;
   }
+  delay(750);
+  int songNo = random(0, 26);
+  startPlayRtttlPGM(PIEZO_PIN, getSong(songNo));
+
+  while (updatePlayRtttl()) {
+    long int reads = readHall();
+    if (reads < 200) {
+      stopPlayRtttl();
+      return;
+    }
+  }
+  while (true) {
+    long int reads = readHall();
+    if (reads < 200) break;
+  }
+}
+
+long int readHall() {
+    long int reads = 0;
+
+    for (int i = 0; i < 10; i++) {
+
+      digitalWrite(HALL_PULSE, LOW);
+      delay(10);
+      digitalWrite(HALL_PULSE, HIGH);
+      delay(10);
+      reads += analogRead(HALL_READ);
+    }
+
+    return reads / 10;
 }
 
 char* getSong(int number) {
@@ -72,7 +66,7 @@ char* getSong(int number) {
     case 10: return "Darude - Sandstorm : d=4,o=5,b=225:8e,8e,8e,8e,8e.,8e,8e,8e,8e,8e,8e,8e.,8a,8a,8a,8a,8a,8a,8a.,8g,8g,8g,8g,8g,8g,8g.,8d,8d,8d,8d,8d,8d,8d.,8e,8e,8e,8e,8e,8e,8e.,8a,8a,8e,8e,8e,8e,8e,8e,8e.";
     case 11: return "Together:d=8,o=5,b=225:4d#,f.,c#.,c.6,4a#.,4g.,f.,d#.,c.,4a#,2g#,4d#,f.,c#.,c.6,2a#,g.,f.,1d#.,d#.,4f,c#.,c.6,2a#,4g.,4f,d#.,f.,g.,4g#.,g#.,4a#,c.6,4c#6,4c6,4a#,4g.,4g#,4a#,2g#";
     case 12: return "Layla:d=4,o=5,b=125:4p,16a5,16c6,16d6,16f6,16d6,16c6,4d6,8p,4g6,4f6,4e6,4c6,4d6,16p,16a5,16c6,16d6,16f6,16d6,16c6,4d6,8p,4a6,4g6,4e6,4c6,4d6";
-    case 13: return "GayBar:d=16,o=5,b=180:8d.,p,d,p,f,p,g,p,f,p,32d,p.,32c#,p.,8c.,p,32c,p.,8a.4,p,32c,p.,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c";
+    case 13: return "Gay Bar:d=16,o=5,b=180:8d.,p,d,p,f,p,g,p,f,p,32d,p.,32c#,p.,8c.,p,32c,p.,8a.4,p,32c,p.,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c,p.,8d.,p,d,p,f,p,g,p,f,p,d,p,32c#,p.,8c.,p,32c,p.,8a.4,p,c,p,32c#,p.,32c";
     case 14: return "JustCant:d=4,o=5,b=63:16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16f,16p,16e,16p,16d,16p,16e,16p,16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16c,16p,16c,16p,32c,32p,32c,16c,16d,16e,16f,16p,16e,16p,16d,16p,16e,16p";
     case 15: return "Sandstor:d=4,o=5,b=125:16e,16e,16e,16e,8e,16e,16e,16e,16e,16e,16e,8e,16a,16a,16a,16a,16a,16a,8a,16g,16g,16g,16g,16g,16g,8g,16d,16d,16e,16e,16e,16e,8e,16e,16e,16e,16e,16e,16e,8e,16a,16a,16e,16e,16e,16e,8e,16e,16e,16e,16e,16e,16e,8e";
     case 16: return "WeLikeTo:d=4,o=5,b=25:32p,16c#6,32a#,32g#,16c#6,32a#,32g#.,32c#6,32a#,32g#,32c#.6,32a#,32g#,32c.6,32d#.6,32c.6,32g#,32c.6,32c6,32d#6,32d#6,32c.6,32a#,32g#,32c#.6,32a#,32g#,32c#.6,32a#,32g#.,32c#6,32a#,32g#,32c#.6,32a#,32g#,32c.6,32d#.6,32c.6,32a#,16g#";
